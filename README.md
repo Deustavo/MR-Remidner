@@ -54,6 +54,8 @@ GITLAB_PROJECT_ID=ID-numérico-do-projeto
 npx ts-node src/index.ts
 ```
 
+---
+
 ## ⏰ Agendamento automático
 
 O bot já vem configurado para enviar mensagens às 09:00 e 14:00 diariamente. Isso é feito com a biblioteca node-cron dentro do src/index.ts.
@@ -65,6 +67,8 @@ cron.schedule('0 9,17 * * *', () => {
 ```
 
 > O horário segue o servidor onde estiver rodando (recomenda-se UTC ou ajustar fuso horário).
+
+---
 
 ## 📄 Licença
 

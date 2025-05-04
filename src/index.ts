@@ -1,4 +1,3 @@
-import cron from 'node-cron';
 import { getOpenMergeRequests } from './gitlab';
 import { sendToSlack } from './slack';
 
@@ -12,10 +11,5 @@ async function run() {
     await sendToSlack('✅ Sem Merge Requests abertas no momento.');
   }
 }
-
-// Rodar 09:00 e 14:00
-// cron.schedule('0 9,14 * * *', () => {
-//   run();
-// });
 
 run();

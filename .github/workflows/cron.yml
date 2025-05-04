@@ -1,0 +1,26 @@
+name: GitLab Merge Request Reminder
+
+on:
+  schedule:
+    - cron: '0 13 * * *'  # 10h BRT
+    - cron: '0 18 * * *'  # 15h BRT
+  workflow_dispatch:      # permite rodar manualmente
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - run: npm install
+
+      - run: npx ts-node src/index.ts
+        env:
+          SLACK_TOKEN: ${{ secrets.SLACK_TOKEN }}
+          GITLAB_TOKEN: ${{ secrets.GITLAB_TOKEN }}
+          GITLAB_PROJECT_ID: ${{ secrets.GITLAB_PROJECT_ID }}
+          SLACK_CHANNEL: ${{ secrets.SLACK_CHANNEL }}

@@ -5,7 +5,7 @@ export const GITLAB_CONFIG = {
   API_URL: 'https://gitlab.com/api/v4',
   PROJECT_ID: process.env.GITLAB_PROJECT_ID,
   TOKEN: process.env.GITLAB_TOKEN || '',
-  QA_REVIEWER_USERNAME: 'pedrol2',
+  QA_REVIEWER_USERNAME: process.env.GITLAB_QA_REVIEWER_USERNAME || '',
   MAX_MRS_TO_DISPLAY: 4
 } as const;
 

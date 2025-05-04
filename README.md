@@ -9,7 +9,6 @@ Um bot escrito em **TypeScript** que envia mensagens automáticas para um canal 
 - Node.js + TypeScript  
 - Slack Web API  
 - GitLab REST API  
-- node-cron  
 - dotenv  
 
 ---

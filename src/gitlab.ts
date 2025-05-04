@@ -1,104 +1,133 @@
 import axios from 'axios';
-import dotenv from 'dotenv';
-dotenv.config();
+import { GITLAB_CONFIG, headers } from './config';
+import {
+  MergeRequestStatus,
+  MergeRequestStatusType,
+  GitLabMergeRequest,
+  GitLabDiscussion,
+  MergeRequestWithStatus
+} from './types';
 
-const GITLAB_API = 'https://gitlab.com/api/v4';
-const projectId = process.env.GITLAB_PROJECT_ID;
-const token = process.env.GITLAB_TOKEN || '';
-
-const headers = {
-  'PRIVATE-TOKEN': token
-};
-
-const STATUS = {
-  READY_TO_MERGE: '✅ Ready to Merge',
-  WAITING_REVIEW: '🕵️‍♂️ Waiting Code Review',
-  THREADS_PENDING: '💬 Threads Pending',
-  WAITING_QA: '🔍 Waiting QA'
-} as const;
-
-type StatusType = typeof STATUS[keyof typeof STATUS];
-
-async function getDiscussions(iid: number) {
-  const url = `${GITLAB_API}/projects/${projectId}/merge_requests/${iid}/discussions`;
-  const res = await axios.get(url, { headers });
-  return res.data;
+/**
+ * Fetches all discussions for a specific merge request
+ */
+async function fetchMergeRequestDiscussions(mergeRequestIid: number): Promise<GitLabDiscussion[]> {
+  const url = `${GITLAB_CONFIG.API_URL}/projects/${GITLAB_CONFIG.PROJECT_ID}/merge_requests/${mergeRequestIid}/discussions`;
+  const response = await axios.get(url, { headers });
+  return response.data;
 }
 
-async function getApprovals(iid: number) {
-  const url = `${GITLAB_API}/projects/${projectId}/merge_requests/${iid}/approvals`;
-  const res = await axios.get(url, { headers });
-  return res.data.approved_by.map((a: any) => a.user.username);
+/**
+ * Fetches approvals for a specific merge request
+ */
+async function fetchMergeRequestApprovals(mergeRequestIid: number): Promise<string[]> {
+  const url = `${GITLAB_CONFIG.API_URL}/projects/${GITLAB_CONFIG.PROJECT_ID}/merge_requests/${mergeRequestIid}/approvals`;
+  const response = await axios.get(url, { headers });
+  return response.data.approved_by.map((approval: any) => approval.user.username);
 }
 
-function formatMessage(mr: any, status: string): string {
-  const link = `<${mr.web_url}|${mr.title}>`;
+/**
+ * Formats a merge request message for display
+ */
+function formatMergeRequestMessage(mergeRequest: GitLabMergeRequest, status: string): string {
+  const link = `<${mergeRequest.web_url}|${mergeRequest.title}>`;
   return `${link}\n*Status:*  ${status}\n`;
 }
 
-function getStatusPriority(status: StatusType): number {
-  const priorities: { [key in StatusType]: number } = {
-    [STATUS.READY_TO_MERGE]: 1,
-    [STATUS.WAITING_REVIEW]: 2,
-    [STATUS.THREADS_PENDING]: 3,
-    [STATUS.WAITING_QA]: 4
+/**
+ * Returns the priority of a status for sorting
+ */
+function getStatusPriority(status: MergeRequestStatusType): number {
+  const priorities: { [key in MergeRequestStatusType]: number } = {
+    [MergeRequestStatus.READY_TO_MERGE]: 1,
+    [MergeRequestStatus.WAITING_REVIEW]: 2,
+    [MergeRequestStatus.THREADS_PENDING]: 3,
+    [MergeRequestStatus.WAITING_QA]: 4
   };
-  return priorities[status] || 5;
+  return priorities[status];
 }
 
+/**
+ * Determines the status of a merge request based on its discussions and approvals
+ */
+function determineMergeRequestStatus(
+  hasPendingThreads: boolean,
+  approvals: string[]
+): MergeRequestStatusType {
+  if (hasPendingThreads) {
+    return MergeRequestStatus.THREADS_PENDING;
+  }
+  
+  if (approvals.length > 0) {
+    if (approvals.includes(GITLAB_CONFIG.QA_REVIEWER_USERNAME)) {
+      return MergeRequestStatus.READY_TO_MERGE;
+    }
+    return MergeRequestStatus.WAITING_QA;
+  }
+  
+  return MergeRequestStatus.WAITING_REVIEW;
+}
+
+/**
+ * Processes a single merge request to determine its status
+ */
+async function processMergeRequest(mergeRequest: GitLabMergeRequest): Promise<MergeRequestWithStatus> {
+  const [discussions, approvals] = await Promise.all([
+    fetchMergeRequestDiscussions(mergeRequest.iid),
+    fetchMergeRequestApprovals(mergeRequest.iid)
+  ]);
+
+  const hasPendingThreads = discussions.some(discussion =>
+    discussion.notes.some(note => note.resolvable && !note.resolved)
+  );
+
+  const status = determineMergeRequestStatus(hasPendingThreads, approvals);
+
+  return { mergeRequest, status };
+}
+
+/**
+ * Creates a link to view remaining merge requests
+ */
+function createRemainingMergeRequestsLink(totalCount: number, displayedCount: number): string {
+  const remainingCount = totalCount - displayedCount;
+  const projectIdFixed = GITLAB_CONFIG.PROJECT_ID?.replace(/%2F/g, '/');
+  const mrListUrl = `https://gitlab.com/${projectIdFixed}/-/merge_requests`;
+  return `<${mrListUrl}|See other ${remainingCount} MRs pending>`;
+}
+
+/**
+ * Fetches and formats all open merge requests
+ */
 export async function getOpenMergeRequests(): Promise<string[]> {
   console.log('🔍 Fetching Merge Requests...');
-  const url = `${GITLAB_API}/projects/${projectId}/merge_requests?state=opened`;
-  const res = await axios.get(url, { headers });
-  const mergeRequests = res.data;
+  
+  const url = `${GITLAB_CONFIG.API_URL}/projects/${GITLAB_CONFIG.PROJECT_ID}/merge_requests?state=opened`;
+  const response = await axios.get(url, { headers });
+  const mergeRequests: GitLabMergeRequest[] = response.data;
 
   console.log(' └─ Found', mergeRequests.length, 'merge requests');
-  const formattedMessages: string[] = [];
-  const MAX_MRS_TO_SHOW = 4;
 
-  // Process all MRs first to get their status
-  const mrsWithStatus = await Promise.all(
-    mergeRequests.map(async (mr: any) => {
-      const [discussions, approvals] = await Promise.all([
-        getDiscussions(mr.iid),
-        getApprovals(mr.iid)
-      ]);
-
-      const hasPendingThreads = discussions.some((d: any) =>
-        d.notes.some((note: any) => note.resolvable && !note.resolved)
-      );
-
-      let status: StatusType = STATUS.WAITING_REVIEW;
-
-      if (hasPendingThreads) {
-        status = STATUS.THREADS_PENDING;
-      } else if (approvals.length > 0 && !approvals.includes('pedrol2')) {
-        status = STATUS.WAITING_QA;
-      } else if (approvals.includes('pedrol2')) {
-        status = STATUS.READY_TO_MERGE;
-      }
-
-      return { mr, status };
-    })
+  // Process all MRs and get their status
+  const processedMergeRequests = await Promise.all(
+    mergeRequests.map(processMergeRequest)
   );
 
   // Sort MRs by status priority
-  mrsWithStatus.sort((a, b) => getStatusPriority(a.status) - getStatusPriority(b.status));
-
-  // Take only the first 4 after sorting
-  const mrsToShow = mrsWithStatus.slice(0, MAX_MRS_TO_SHOW);
+  processedMergeRequests.sort((a, b) => 
+    getStatusPriority(a.status) - getStatusPriority(b.status)
+  );
 
   // Format messages for the selected MRs
-  for (const { mr, status } of mrsToShow) {
-    formattedMessages.push(formatMessage(mr, status));
-  }
+  const formattedMessages = processedMergeRequests
+    .slice(0, GITLAB_CONFIG.MAX_MRS_TO_DISPLAY)
+    .map(({ mergeRequest, status }) => formatMergeRequestMessage(mergeRequest, status));
 
-  // Add link to remaining MRs if there are more than 4
-  if (mergeRequests.length > MAX_MRS_TO_SHOW) {
-    const remainingCount = mergeRequests.length - MAX_MRS_TO_SHOW;
-    const projectIdFixed = projectId?.replace(/%2F/g, '/');
-    const mrListUrl = `https://gitlab.com/${projectIdFixed}/-/merge_requests`;
-    formattedMessages.push(`<${mrListUrl}|See other ${remainingCount} MRs pending>`);
+  // Add link to remaining MRs if there are more than the display limit
+  if (mergeRequests.length > GITLAB_CONFIG.MAX_MRS_TO_DISPLAY) {
+    formattedMessages.push(
+      createRemainingMergeRequestsLink(mergeRequests.length, GITLAB_CONFIG.MAX_MRS_TO_DISPLAY)
+    );
   }
 
   return formattedMessages;

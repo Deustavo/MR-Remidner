@@ -1,4 +1,4 @@
-import { getOpenMergeRequests } from './gitlab';
+import { getOpenMergeRequests } from './gitlab/gitlab';
 import { sendToSlack } from './slack';
 
 async function run() {
@@ -7,7 +7,7 @@ async function run() {
 
   if (messages.length > 0) {
     const header = '*We have pending MRs 👀*\n\n';
-    const body = messages.join('\n\n'); // <-- line break between MRs
+    const body = messages.join('\n'); // <-- line break between MRs
     await sendToSlack(`${header}\n${body}`);
     console.log('✅ Messages sent to Slack successfully.');
   } else {

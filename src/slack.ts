@@ -5,14 +5,14 @@ dotenv.config();
 const slackClient = new WebClient(process.env.SLACK_TOKEN);
 
 export async function sendToSlack(message: string) {
-  console.log('💬 Enviando mensagem para o Slack...');
+  console.log('💬 Sending message to Slack...');
   try {
     await slackClient.chat.postMessage({
       channel: process.env.SLACK_CHANNEL!,
       text: message,
-      mrkdwn: true // Habilita Markdown
+      mrkdwn: true // Enable Markdown
     });
   } catch (error) {
-    console.error('Erro ao enviar mensagem para o Slack:', error);
+    console.error('Error sending message to Slack:', error);
   }
 }

@@ -2,16 +2,16 @@ import { getOpenMergeRequests } from './gitlab';
 import { sendToSlack } from './slack';
 
 async function run() {
-  console.log('Iniciando verificação de Merge Requests...');
+  console.log('Starting MR check...');
   const messages = await getOpenMergeRequests();
 
   if (messages.length > 0) {
-    const header = '🚨 *Merge Requests Pendentes:*\n';
-    const body = messages.join('\n\n'); // <-- quebra entre MRs
+    const header = '*We have pending MRs 👀*\n';
+    const body = messages.join('\n\n'); // <-- line break between MRs
     await sendToSlack(`${header}\n${body}`);
-    console.log('✅ Mensagem enviada para o Slack com sucesso.');
+    console.log('✅ Messages sent to Slack successfully.');
   } else {
-    await sendToSlack('✅ Sem Merge Requests abertas no momento.');
+    await sendToSlack('✅ No pending MRs at the moment.');
   }
 }
 

@@ -28,7 +28,7 @@ function formatMessage(mr: any, status: string): string {
 }
 
 export async function getOpenMergeRequests(): Promise<string[]> {
-  console.log('🔍 Buscando Merge Requests...');
+  console.log('🔍 Fetching Merge Requests...');
   const url = `${GITLAB_API}/projects/${projectId}/merge_requests?state=opened`;
   const res = await axios.get(url, { headers });
   const mergeRequests = res.data;

@@ -1,10 +1,43 @@
 # 🤖 GitLab Merge Request Reminder Bot
 
-Um bot escrito em **TypeScript** que envia mensagens automáticas para um canal do **Slack** duas vezes ao dia, listando as Merge Requests abertas de um repositório do **GitLab**.
+This bot automatically sends a daily summary of open Merge Requests from a GitLab project to a Slack channel, twice a day. It provides visual status tags based on the review and approval state of each MR.
 
 ---
 
-## ⚙️ Tecnologias
+## 🚀 Features
+
+- 💬 Posts Merge Request summaries with titles and clickable links.
+- 🔎 Detects MR status:
+  - Threads pending
+  - Waiting for code review
+  - Waiting for QA
+  - Ready to merge
+- ✅ Works serverlessly via **GitHub Actions**.
+- 🧠 Uses Slack’s rich message formatting for clean display.
+
+---
+
+## 📊 Status Logic
+
+Each Merge Request is shown with a status and an emoji, based on the following rules:
+
+| Emoji  | Status               | Logic                                                                 |
+|--------|----------------------|------------------------------------------------------------------------|
+| 💬     | Threads Pending       | Has unresolved threads                                                |
+| 🕵️‍♂️   | Waiting Code Review   | No unresolved threads, no approvals                                  |
+| 🔍     | Waiting QA            | No unresolved threads, has approval(s), but **not** from QA   |
+| ✅     | Ready to Merge        | No unresolved threads, has approval from QA                   |
+
+Each MR is shown in the message like this:
+
+```
+<https://gitlab.com/...|project#iid - MR Title>
+🔍 *Status:* Waiting QA
+```
+
+---
+
+## ⚙️ Technologies
 
 - Node.js + TypeScript  
 - Slack Web API  
@@ -13,41 +46,37 @@ Um bot escrito em **TypeScript** que envia mensagens automáticas para um canal 
 
 ---
 
-## 🚀 Como rodar localmente
+## 🚀 Setup
 
-### 1. Clone o projeto
+### 1. Clone the project
 
 ```bash
-git clone https://github.com/seu-usuario/merge-request-reminder.git
+git clone https://github.com/your-username/merge-request-reminder.git
 cd merge-request-reminder
 ```
 
----
-
-### 2. Instale as dependencias
+### 2. Install dependencies
 
 ```bash
 npm install
 ```
 
----
+### 3. Environment Variables
 
-### 3. Configure as variáveis de ambiente
+Add a `.env` file to the root of your project with the following content:
 
-Crie um arquivo .env na raiz com o seguinte conteúdo:
-
-```bash
-SLACK_TOKEN=xoxb-seu-token-do-slack
-SLACK_CHANNEL=nome-do-canal-ou-ID
-GITLAB_TOKEN=glpat-seu-token-do-gitlab
-GITLAB_PROJECT_ID=ID-numérico-do-projeto
+```env
+SLACK_TOKEN=your-slack-bot-token
+SLACK_CHANNEL=channel-id-or-name
+GITLAB_TOKEN=your-gitlab-personal-access-token
+GITLAB_PROJECT_ID=your-project-id
+GITLAB_QA_REVIEWER_USERNAME=team-qa-gitlab-user
 ```
 
-> 🔐 Dica: use o ID numérico do canal (ex: C0123456) para evitar problemas de channel_not_found.
+> 🔎 Tip: Use the channel ID (e.g. `C01ABCXYZ`) instead of just the name to avoid `channel_not_found` errors.
 
----
 
-### 4. Execute o bot manualmente
+### 4. Run the bot manually
 
 ```bash
 npx ts-node src/index.ts
@@ -55,8 +84,55 @@ npx ts-node src/index.ts
 
 ---
 
+## ☁️ Deployment with GitHub Actions
+
+This project uses **GitHub Actions** to run automatically at 10:00 AM and 2:00 PM (BRT).
+
+### 🛠 Setup GitHub Secrets
+
+Go to your repository → `Settings > Secrets > Actions` and add:
+
+- `SLACK_TOKEN`
+- `SLACK_CHANNEL`
+- `GITLAB_TOKEN`
+- `GITLAB_PROJECT_ID`
+- `GITLAB_QA_REVIEWER_USERNAME`
+
+### 🧩 GitHub Actions Workflow
+
+File: `.github/workflows/cron.yml`
+
+```yaml
+name: GitLab Merge Request Bot
+
+on:
+  schedule:
+    - cron: '0 13 * * *'  # 10:00 BRT (UTC+3)
+    - cron: '0 17 * * *'  # 14:00 BRT (UTC+3)
+  workflow_dispatch:
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm install
+      - run: npx ts-node src/index.ts
+        env:
+          SLACK_TOKEN: ${{ secrets.SLACK_TOKEN }}
+          GITLAB_TOKEN: ${{ secrets.GITLAB_TOKEN }}
+          GITLAB_PROJECT_ID: ${{ secrets.GITLAB_PROJECT_ID }}
+          SLACK_CHANNEL: ${{ secrets.SLACK_CHANNEL }}
+          GITLAB_QA_REVIEWER_USERNAME: ${{ secrets.GITLAB_QA_REVIEWER_USERNAME }}
+```
+
+---
+
 ## 📄 Licença
 
-Esse bot foi inspirado em uma criação do [Leo Caliani](https://github.com/lcaliani).
+This bot was inspired by a creation by [Leo Caliani](https://github.com/lcaliani).
 
-MIT. Livre para usar, modificar e contribuir.
+MIT. Free to use, modify and contribute.

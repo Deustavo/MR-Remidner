@@ -34,8 +34,12 @@ export async function getOpenMergeRequests(): Promise<string[]> {
   const mergeRequests = res.data;
 
   const formattedMessages: string[] = [];
+  const MAX_MRS_TO_SHOW = 4;
 
-  for (const mr of mergeRequests) {
+  // Process only the first 4 MRs
+  const mrsToProcess = mergeRequests.slice(0, MAX_MRS_TO_SHOW);
+
+  for (const mr of mrsToProcess) {
     const [discussions, approvals] = await Promise.all([
       getDiscussions(mr.iid),
       getApprovals(mr.iid)
@@ -56,6 +60,14 @@ export async function getOpenMergeRequests(): Promise<string[]> {
     }
 
     formattedMessages.push(formatMessage(mr, status));
+  }
+
+  // Add link to remaining MRs if there are more than 4
+  if (mergeRequests.length > MAX_MRS_TO_SHOW) {
+    const remainingCount = mergeRequests.length - MAX_MRS_TO_SHOW;
+    const projectIdFixed = projectId?.replace(/%2F/g, '/');
+    const mrListUrl = `https://gitlab.com/${projectIdFixed}/-/merge_requests`;
+    formattedMessages.push(`<${mrListUrl}|See other ${remainingCount} MRs pending>`);
   }
 
   return formattedMessages;

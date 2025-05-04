@@ -31,7 +31,7 @@ async function fetchMergeRequestApprovals(mergeRequestIid: number): Promise<stri
  */
 function formatMergeRequestMessage(mergeRequest: GitLabMergeRequest, status: string): string {
   const link = `<${mergeRequest.web_url}|${mergeRequest.title}>`;
-  return `${link}\n*Status:*  ${status}\n`;
+  return `> ${link}\n> *Status:*  ${status}\n`;
 }
 
 /**

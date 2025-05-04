@@ -82,6 +82,12 @@ GITLAB_QA_REVIEWER_USERNAME=team-qa-gitlab-user
 npx ts-node src/index.ts
 ```
 
+### 5. See the slack message
+
+You should receive a message like this in Slack
+
+![image](https://github.com/user-attachments/assets/74f1a335-fcf3-478f-a974-4cc4837b63b8)
+
 ---
 
 ## ☁️ Deployment with GitHub Actions

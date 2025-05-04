@@ -56,20 +56,6 @@ npx ts-node src/index.ts
 
 ---
 
-## ⏰ Agendamento automático
-
-O bot já vem configurado para enviar mensagens às 09:00 e 14:00 diariamente. Isso é feito com a biblioteca node-cron dentro do src/index.ts.
-
-```ts
-cron.schedule('0 9,17 * * *', () => {
-  run();
-});
-```
-
-> O horário segue o servidor onde estiver rodando (recomenda-se UTC ou ajustar fuso horário).
-
----
-
 ## 📄 Licença
 
 Esse bot foi inspirado em uma criação do [Leo Caliani](https://github.com/lcaliani).

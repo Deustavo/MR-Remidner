@@ -13,7 +13,7 @@ This bot automatically sends a daily summary of open Merge Requests from a GitLa
   - Waiting for QA
   - Ready to merge
 - ✅ Works serverlessly via **GitHub Actions**.
-- 🧠 Uses Slack’s rich message formatting for clean display.
+- 🧠 Uses Slack's rich message formatting for clean display.
 
 ---
 
@@ -25,8 +25,9 @@ Each Merge Request is shown with a status and an emoji, based on the following r
 |--------|----------------------|------------------------------------------------------------------------|
 | 💬     | Threads Pending       | Has unresolved threads                                                |
 | 🕵️‍♂️   | Waiting Code Review   | No unresolved threads, no approvals                                  |
-| 🔍     | Waiting QA            | No unresolved threads, has approval(s), but **not** from QA   |
-| ✅     | Ready to Merge        | No unresolved threads, has approval from QA                   |
+| 🛠️     | Changes Requested     | Has related issues with 'QA::Waiting to dev' label                   |
+| 🔍     | Waiting QA            | No unresolved threads, has approval(s), but **not** from QA          |
+| ✅     | Ready to Merge        | No unresolved threads, has approval from QA                          |
 
 Each MR is shown in the message like this:
 

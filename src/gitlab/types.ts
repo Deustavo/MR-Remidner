@@ -2,7 +2,8 @@ export const MergeRequestStatus = {
   READY_TO_MERGE: '✅ Ready to Merge',
   WAITING_REVIEW: '🕵️‍♂️ Waiting Code Review',
   THREADS_PENDING: '💬 Threads Pending',
-  WAITING_QA: '🔍 Waiting QA'
+  WAITING_QA_REVIEW: '🔍 Waiting QA Review',
+  CHANGES_REQUESTED: '🛠️ Changes Requested',
 } as const;
 
 export type MergeRequestStatusType = typeof MergeRequestStatus[keyof typeof MergeRequestStatus];
@@ -28,6 +29,7 @@ export interface GitLabMergeRequest {
   iid: number;
   title: string;
   web_url: string;
+  labels: string[];
 }
 
 export interface MergeRequestWithStatus {

@@ -27,6 +27,15 @@ async function fetchMergeRequestApprovals(mergeRequestIid: number): Promise<stri
 }
 
 /**
+ * Fetches related issues for a merge request
+ */
+async function fetchMergeRequestIssues(mergeRequestIid: number): Promise<any[]> {
+  const url = `${GITLAB_CONFIG.API_URL}/projects/${GITLAB_CONFIG.PROJECT_ID}/merge_requests/${mergeRequestIid}/related_issues`;
+  const response = await axios.get(url, { headers });
+  return response.data;
+}
+
+/**
  * Formats a merge request message for display
  */
 function formatMergeRequestMessage(mergeRequest: GitLabMergeRequest, status: string): string {
@@ -42,18 +51,20 @@ function getStatusPriority(status: MergeRequestStatusType): number {
     [MergeRequestStatus.READY_TO_MERGE]: 1,
     [MergeRequestStatus.WAITING_REVIEW]: 2,
     [MergeRequestStatus.THREADS_PENDING]: 3,
-    [MergeRequestStatus.WAITING_QA]: 4
+    [MergeRequestStatus.CHANGES_REQUESTED]: 4,
+    [MergeRequestStatus.WAITING_QA_REVIEW]: 5,
   };
   return priorities[status];
 }
 
 /**
- * Determines the status of a merge request based on its discussions and approvals
+ * Determines the status of a merge request based on its discussions, approvals and related issues
  */
-function determineMergeRequestStatus(
+async function determineMergeRequestStatus(
   hasPendingThreads: boolean,
-  approvals: string[]
-): MergeRequestStatusType {
+  approvals: string[],
+  mergeRequestIid: number
+): Promise<MergeRequestStatusType> {
   if (hasPendingThreads) {
     return MergeRequestStatus.THREADS_PENDING;
   }
@@ -62,7 +73,18 @@ function determineMergeRequestStatus(
     if (approvals.includes(GITLAB_CONFIG.QA_REVIEWER_USERNAME)) {
       return MergeRequestStatus.READY_TO_MERGE;
     }
-    return MergeRequestStatus.WAITING_QA;
+
+    // Check for related issues with QA::Waiting to dev label
+    const relatedIssues = await fetchMergeRequestIssues(mergeRequestIid);
+    const hasQaWaitingLabel = relatedIssues.some(issue => 
+      issue.labels.includes('QA::Waiting to dev')
+    );
+
+    if (hasQaWaitingLabel) {
+      return MergeRequestStatus.CHANGES_REQUESTED;
+    }
+
+    return MergeRequestStatus.WAITING_QA_REVIEW;
   }
   
   return MergeRequestStatus.WAITING_REVIEW;
@@ -81,19 +103,9 @@ async function processMergeRequest(mergeRequest: GitLabMergeRequest): Promise<Me
     discussion.notes.some(note => note.resolvable && !note.resolved)
   );
 
-  const status = determineMergeRequestStatus(hasPendingThreads, approvals);
+  const status = await determineMergeRequestStatus(hasPendingThreads, approvals, mergeRequest.iid);
 
   return { mergeRequest, status };
-}
-
-/**
- * Creates a link to view remaining merge requests
- */
-function createRemainingMergeRequestsLink(totalCount: number, displayedCount: number): string {
-  const remainingCount = totalCount - displayedCount;
-  const projectIdFixed = GITLAB_CONFIG.PROJECT_ID?.replace(/%2F/g, '/');
-  const mrListUrl = `https://gitlab.com/${projectIdFixed}/-/merge_requests`;
-  return `<${mrListUrl}|See other ${remainingCount} MRs pending>`;
 }
 
 /**
@@ -120,15 +132,7 @@ export async function getOpenMergeRequests(): Promise<string[]> {
 
   // Format messages for the selected MRs
   const formattedMessages = processedMergeRequests
-    .slice(0, GITLAB_CONFIG.MAX_MRS_TO_DISPLAY)
     .map(({ mergeRequest, status }) => formatMergeRequestMessage(mergeRequest, status));
-
-  // Add link to remaining MRs if there are more than the display limit
-  if (mergeRequests.length > GITLAB_CONFIG.MAX_MRS_TO_DISPLAY) {
-    formattedMessages.push(
-      createRemainingMergeRequestsLink(mergeRequests.length, GITLAB_CONFIG.MAX_MRS_TO_DISPLAY)
-    );
-  }
 
   return formattedMessages;
 }

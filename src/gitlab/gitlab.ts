@@ -70,7 +70,11 @@ async function determineMergeRequestStatus(
   }
   
   if (approvals.length > 0) {
-    if (approvals.includes(GITLAB_CONFIG.QA_REVIEWER_USERNAME)) {
+    // If there are more than one approval and the QA reviewer is one of them, the MR is ready to merge
+    if (
+      approvals.length > 1 &&
+      approvals.includes(GITLAB_CONFIG.QA_REVIEWER_USERNAME)
+    ) {
       return MergeRequestStatus.READY_TO_MERGE;
     }
 
@@ -120,9 +124,10 @@ export async function getOpenMergeRequests(): Promise<string[]> {
 
   console.log(' └─ Found', mergeRequests.length, 'merge requests');
 
-  // Process all MRs and get their status
+  // Filter out draft merge requests and process the remaining ones
+  const nonDraftMergeRequests = mergeRequests.filter(mr => !mr.title.startsWith('Draft'));
   const processedMergeRequests = await Promise.all(
-    mergeRequests.map(processMergeRequest)
+    nonDraftMergeRequests.map(processMergeRequest)
   );
 
   // Sort MRs by status priority

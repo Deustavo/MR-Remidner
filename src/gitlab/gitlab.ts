@@ -43,8 +43,8 @@ function formatMergeRequestMessage(mergeRequest: GitLabMergeRequest, status: str
   let message = `> ${link}\n> *Status:*  ${status}\n`;
   
   if (status === MergeRequestStatus.CHANGES_REQUESTED_BY_QA && relatedIssues.length > 0) {
-    const issueId = relatedIssues[0].iid;
-    const issueLink = `<https://gitlab.com/rico360/ricochet/-/issues/${issueId}#childitems|linked issue>`;
+    const relatedIssueLink = relatedIssues[0].web_url;
+    const issueLink = `<${relatedIssueLink}#childitems|linked issue>`;
     message += `> See the subtasks listed in the ${issueLink}.\n`;
   }
   

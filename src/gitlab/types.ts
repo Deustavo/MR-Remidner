@@ -32,6 +32,11 @@ export interface GitLabMergeRequest {
   labels: string[];
 }
 
+export interface GitLabIssue {
+  web_url: string;
+  labels: string[];
+}
+
 export interface MergeRequestWithStatus {
   mergeRequest: GitLabMergeRequest;
   status: MergeRequestStatusType;

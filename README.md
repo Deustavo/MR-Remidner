@@ -25,7 +25,7 @@ Each Merge Request is shown with a status and an emoji, based on the following r
 |--------|----------------------|------------------------------------------------------------------------|
 | 💬     | Threads Pending       | Has unresolved threads                                                |
 | 🕵️‍♂️   | Waiting Code Review   | No unresolved threads, no approvals                                  |
-| 🛠️     | Changes Requested     | Has related issues with 'QA::Waiting to dev' label                   |
+| 🛠️     | Changes Requested by QA     | Has related issues with 'QA::Waiting to dev' label                   |
 | 🔍     | Waiting QA            | No unresolved threads, has approval(s), but **not** from QA          |
 | ✅     | Ready to Merge        | No unresolved threads, has approval from QA                          |
 

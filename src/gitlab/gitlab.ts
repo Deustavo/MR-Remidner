@@ -38,9 +38,17 @@ async function fetchMergeRequestIssues(mergeRequestIid: number): Promise<any[]> 
 /**
  * Formats a merge request message for display
  */
-function formatMergeRequestMessage(mergeRequest: GitLabMergeRequest, status: string): string {
+function formatMergeRequestMessage(mergeRequest: GitLabMergeRequest, status: string, relatedIssues: any[]): string {
   const link = `<${mergeRequest.web_url}|${mergeRequest.title}>`;
-  return `> ${link}\n> *Status:*  ${status}\n`;
+  let message = `> ${link}\n> *Status:*  ${status}\n`;
+  
+  if (status === MergeRequestStatus.CHANGES_REQUESTED_BY_QA && relatedIssues.length > 0) {
+    const issueId = relatedIssues[0].iid;
+    const issueLink = `<https://gitlab.com/rico360/ricochet/-/issues/${issueId}#childitems|linked issue>`;
+    message += `> See the subtasks listed in the ${issueLink}.\n`;
+  }
+  
+  return message;
 }
 
 /**
@@ -51,7 +59,7 @@ function getStatusPriority(status: MergeRequestStatusType): number {
     [MergeRequestStatus.READY_TO_MERGE]: 1,
     [MergeRequestStatus.WAITING_REVIEW]: 2,
     [MergeRequestStatus.THREADS_PENDING]: 3,
-    [MergeRequestStatus.CHANGES_REQUESTED]: 4,
+    [MergeRequestStatus.CHANGES_REQUESTED_BY_QA]: 4,
     [MergeRequestStatus.WAITING_QA_REVIEW]: 5,
   };
   return priorities[status];
@@ -85,7 +93,7 @@ async function determineMergeRequestStatus(
     );
 
     if (hasQaWaitingLabel) {
-      return MergeRequestStatus.CHANGES_REQUESTED;
+      return MergeRequestStatus.CHANGES_REQUESTED_BY_QA;
     }
 
     return MergeRequestStatus.WAITING_QA_REVIEW;
@@ -137,7 +145,10 @@ export async function getOpenMergeRequests(): Promise<string[]> {
 
   // Format messages for the selected MRs
   const formattedMessages = processedMergeRequests
-    .map(({ mergeRequest, status }) => formatMergeRequestMessage(mergeRequest, status));
+    .map(async ({ mergeRequest, status }) => {
+      const relatedIssues = await fetchMergeRequestIssues(mergeRequest.iid);
+      return formatMergeRequestMessage(mergeRequest, status, relatedIssues);
+    });
 
-  return formattedMessages;
+  return Promise.all(formattedMessages);
 }

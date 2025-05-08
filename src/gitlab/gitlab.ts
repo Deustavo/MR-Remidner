@@ -71,7 +71,7 @@ function getStatusPriority(status: MergeRequestStatusType): number {
 async function determineMergeRequestStatus(
   hasPendingThreads: boolean,
   approvals: string[],
-  mergeRequestIid: number
+  relatedIssues: any[]
 ): Promise<MergeRequestStatusType> {
   if (hasPendingThreads) {
     return MergeRequestStatus.THREADS_PENDING;
@@ -87,7 +87,6 @@ async function determineMergeRequestStatus(
     }
 
     // Check for related issues with QA::Waiting to dev label
-    const relatedIssues = await fetchMergeRequestIssues(mergeRequestIid);
     const hasQaWaitingLabel = relatedIssues.some(issue => 
       issue.labels.includes('QA::Waiting to dev')
     );
@@ -105,19 +104,20 @@ async function determineMergeRequestStatus(
 /**
  * Processes a single merge request to determine its status
  */
-async function processMergeRequest(mergeRequest: GitLabMergeRequest): Promise<MergeRequestWithStatus> {
-  const [discussions, approvals] = await Promise.all([
+async function processMergeRequest(mergeRequest: GitLabMergeRequest): Promise<MergeRequestWithStatus & { relatedIssues: any[] }> {
+  const [discussions, approvals, relatedIssues] = await Promise.all([
     fetchMergeRequestDiscussions(mergeRequest.iid),
-    fetchMergeRequestApprovals(mergeRequest.iid)
+    fetchMergeRequestApprovals(mergeRequest.iid),
+    fetchMergeRequestIssues(mergeRequest.iid)
   ]);
 
   const hasPendingThreads = discussions.some(discussion =>
     discussion.notes.some(note => note.resolvable && !note.resolved)
   );
 
-  const status = await determineMergeRequestStatus(hasPendingThreads, approvals, mergeRequest.iid);
+  const status = await determineMergeRequestStatus(hasPendingThreads, approvals, relatedIssues);
 
-  return { mergeRequest, status };
+  return { mergeRequest, status, relatedIssues };
 }
 
 /**
@@ -145,10 +145,9 @@ export async function getOpenMergeRequests(): Promise<string[]> {
 
   // Format messages for the selected MRs
   const formattedMessages = processedMergeRequests
-    .map(async ({ mergeRequest, status }) => {
-      const relatedIssues = await fetchMergeRequestIssues(mergeRequest.iid);
-      return formatMergeRequestMessage(mergeRequest, status, relatedIssues);
-    });
+    .map(({ mergeRequest, status, relatedIssues }) => 
+      formatMergeRequestMessage(mergeRequest, status, relatedIssues)
+    );
 
-  return Promise.all(formattedMessages);
+  return formattedMessages;
 }

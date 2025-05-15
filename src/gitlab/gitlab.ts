@@ -105,6 +105,14 @@ async function determineMergeRequestStatus(
   if (hasPendingThreads) {
     return MergeRequestStatus.THREADS_PENDING;
   }
+
+  const hasQaWaitingLabel = relatedIssues.some(issue => 
+    issue.labels.includes('QA::Waiting to dev')
+  );
+
+  if (hasQaWaitingLabel) {
+    return MergeRequestStatus.CHANGES_REQUESTED_BY_QA;
+  }
   
   if (approvals.length > 0) {
     const hasQaApproval = approvals.includes(GITLAB_CONFIG.QA_REVIEWER_USERNAME);
@@ -112,14 +120,6 @@ async function determineMergeRequestStatus(
     
     if (hasMultipleApprovals && hasQaApproval) {
       return MergeRequestStatus.READY_TO_MERGE;
-    }
-
-    const hasQaWaitingLabel = relatedIssues.some(issue => 
-      issue.labels.includes('QA::Waiting to dev')
-    );
-
-    if (hasQaWaitingLabel) {
-      return MergeRequestStatus.CHANGES_REQUESTED_BY_QA;
     }
 
     return MergeRequestStatus.WAITING_QA_REVIEW;

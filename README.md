@@ -1,16 +1,17 @@
 # 🤖 GitLab Merge Request Reminder Bot
 
-This bot automatically sends a daily summary of open Merge Requests from a GitLab project to a Slack channel, twice a day. It provides visual status tags based on the review and approval state of each MR.
+This bot automatically sends a daily summary of open Merge Requests from a GitLab project to a Slack channel. It provides visual status tags based on the review and approval state of each MR.
 
 ---
 
 ## 🚀 Features
 
 - 💬 Posts Merge Request summaries with titles and clickable links.
-- 🔎 Detects MR status:
+- 🔎 Detects MR status based on threads, approvals, and issue labels:
   - Threads pending
   - Waiting for code review
   - Waiting for QA
+  - Changes requested by QA
   - Ready to merge
 - ✅ Works serverlessly via **GitHub Actions**.
 - 🧠 Uses Slack's rich message formatting for clean display.
@@ -26,8 +27,22 @@ Each Merge Request is shown with a status and an emoji, based on the following r
 | 💬     | Threads Pending       | Has unresolved threads                                                |
 | 🕵️‍♂️   | Waiting Code Review   | No unresolved threads, no approvals                                  |
 | 🛠️     | Changes Requested by QA     | Has related issues with 'QA::Waiting to dev' label                   |
-| 🔍     | Waiting QA            | No unresolved threads, has approval(s), but **not** from QA          |
-| ✅     | Ready to Merge        | No unresolved threads, has approval from QA                          |
+| 🔍     | Waiting QA            | No unresolved threads, has approval(s), but related issues don't have QA approval labels |
+| ✅     | Ready to Merge        | No unresolved threads, has approvals, and related issues have 'WIP::Tested' or later labels |
+
+### QA Approval Logic
+
+The bot determines QA approval by checking if related issues have the following labels (or any later in the workflow):
+- `WIP::Tested` ✅
+- `WIP::Waiting Deploy` ✅
+
+**Board Labels Order:**
+1. `WIP::Dev`
+2. `WIP::Waiting Code Review`
+3. `WIP::Waiting QA`
+4. `WIP::QA`
+5. `WIP::Tested` ← **QA Approved from here**
+6. `WIP::Waiting Deploy` ← **QA Approved**
 
 Each MR is shown in the message like this:
 
@@ -92,7 +107,7 @@ You should receive a message like this in Slack
 
 ## ☁️ Deployment with GitHub Actions
 
-This project uses **GitHub Actions** to run automatically at 10:00 AM and 2:00 PM (BRT).
+This project uses **GitHub Actions** to run automatically at 10:00 AM BRT on weekdays.
 
 ### 🛠 Setup GitHub Secrets
 
@@ -108,13 +123,12 @@ Go to your repository → `Settings > Secrets > Actions` and add:
 File: `.github/workflows/cron.yml`
 
 ```yaml
-name: GitLab Merge Request Bot
+name: GitLab Merge Request Reminder
 
 on:
   schedule:
-    - cron: '0 13 * * *'  # 10:00 BRT (UTC+3)
-    - cron: '0 17 * * *'  # 14:00 BRT (UTC+3)
-  workflow_dispatch:
+    - cron: '0 14 * * 1-5'  # 10h BRT, apenas dias úteis
+  workflow_dispatch:        # permite rodar manualmente
 
 jobs:
   run:

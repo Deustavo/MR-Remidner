@@ -71,7 +71,6 @@ SLACK_TOKEN=your-slack-bot-token
 SLACK_CHANNEL=channel-id-or-name
 GITLAB_TOKEN=your-gitlab-personal-access-token
 GITLAB_PROJECT_ID=your-project-id
-GITLAB_QA_REVIEWER_USERNAME=team-qa-gitlab-user
 ```
 
 > 🔎 Tip: Use the channel ID (e.g. `C01ABCXYZ`) instead of just the name to avoid `channel_not_found` errors.
@@ -103,7 +102,6 @@ Go to your repository → `Settings > Secrets > Actions` and add:
 - `SLACK_CHANNEL`
 - `GITLAB_TOKEN`
 - `GITLAB_PROJECT_ID`
-- `GITLAB_QA_REVIEWER_USERNAME`
 
 ### 🧩 GitHub Actions Workflow
 
@@ -133,7 +131,6 @@ jobs:
           GITLAB_TOKEN: ${{ secrets.GITLAB_TOKEN }}
           GITLAB_PROJECT_ID: ${{ secrets.GITLAB_PROJECT_ID }}
           SLACK_CHANNEL: ${{ secrets.SLACK_CHANNEL }}
-          GITLAB_QA_REVIEWER_USERNAME: ${{ secrets.GITLAB_QA_REVIEWER_USERNAME }}
 ```
 
 ---

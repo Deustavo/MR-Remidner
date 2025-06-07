@@ -9,6 +9,16 @@ import {
   GitLabIssue
 } from './types';
 
+// Board labels in order
+const BOARD_LABELS = [
+  'WIP::Dev',
+  'WIP::Waiting Code Review',
+  'WIP::Waiting QA',
+  'WIP::QA',
+  'WIP::Tested',
+  'WIP::Waiting Deploy'
+] as const;
+
 class GitLabError extends Error {
   constructor(message: string, public readonly originalError?: unknown) {
     super(message);
@@ -95,6 +105,18 @@ function getStatusPriority(status: MergeRequestStatusType): number {
 }
 
 /**
+ * Checks if an issue has been approved by QA based on its labels
+ */
+function hasQaApprovalByLabels(issueLabels: string[]): boolean {
+  const qaApprovedIndex = BOARD_LABELS.indexOf('WIP::Tested');
+  
+  return issueLabels.some(label => {
+    const labelIndex = BOARD_LABELS.indexOf(label as any);
+    return labelIndex >= qaApprovedIndex && labelIndex !== -1;
+  });
+}
+
+/**
  * Determines the status of a merge request based on its discussions, approvals and related issues
  */
 async function determineMergeRequestStatus(
@@ -115,7 +137,7 @@ async function determineMergeRequestStatus(
   }
   
   if (approvals.length > 0) {
-    const hasQaApproval = approvals.includes(GITLAB_CONFIG.QA_REVIEWER_USERNAME);
+    const hasQaApproval = relatedIssues.some(issue => hasQaApprovalByLabels(issue.labels));
     const hasMultipleApprovals = approvals.length > 1;
     
     if (hasMultipleApprovals && hasQaApproval) {

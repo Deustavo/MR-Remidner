@@ -2,7 +2,8 @@ name: GitLab Merge Request Reminder
 
 on:
   schedule:
-    - cron: '0 14 * * 1-5'  # 10h BRT, apenas dias úteis
+    - cron: '0 12 * * 1-5'  # 9h BRT, apenas dias úteis
+    - cron: '0 19 * * 1-5'  # 16h BRT, apenas dias úteis
   workflow_dispatch:        # permite rodar manualmente
 
 jobs:

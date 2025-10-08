@@ -70,7 +70,7 @@ async function fetchMergeRequestIssues(projectId: number, mergeRequestIid: numbe
 }
 
 /**
- * Checks if an issue has open child items (subtasks)
+ * Checks if an issue has open child items created by QA team members, excluding test cases
  */
 async function hasOpenChildItems(issue: GitLabIssue): Promise<boolean> {
   try {
@@ -78,19 +78,28 @@ async function hasOpenChildItems(issue: GitLabIssue): Promise<boolean> {
     const response = await gitlabRequest<Array<{ 
       link_type?: string;
       state?: string;
+      title?: string;
+      author?: {
+        username: string;
+      };
     }>>(url);
-    
-    // Check if there are any open related issues
-    // In GitLab, child items are typically shown as relates_to links
-    const openChildren = response.filter(link => 
-      link.state === 'opened'
+
+    // Filter for child items opened by QA:
+    // 1. Only open items (state === 'opened')
+    // 2. Exclude items with "[Test Cases]" in the title
+    // 3. Author must be in the QA team list
+    const qaOpenChildren = response.filter(link => 
+      link.state === 'opened' && 
+      !link.title?.includes('[Test Cases]') &&
+      link.author?.username && 
+      GITLAB_CONFIG.QA_USERNAMES.includes(link.author.username)
     );
     
-    if (openChildren.length > 0) {
-      console.log(` └─ Issue #${issue.iid} has ${openChildren.length} open child item(s)`);
+    if (qaOpenChildren.length > 0) {
+      console.log(` └─ Issue #${issue.iid} has ${qaOpenChildren.length} open item(s) created by QA (excluding test cases)`);
     }
     
-    return openChildren.length > 0;
+    return qaOpenChildren.length > 0;
   } catch (error) {
     // If we can't fetch links (e.g., no permission or 404), assume no open child items
     return false;

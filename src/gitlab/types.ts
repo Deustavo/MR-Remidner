@@ -30,11 +30,14 @@ export interface GitLabMergeRequest {
   title: string;
   web_url: string;
   labels: string[];
+  project_id: number;
 }
 
 export interface GitLabIssue {
   web_url: string;
   labels: string[];
+  project_id: number;
+  iid: number;
 }
 
 export interface MergeRequestWithStatus {

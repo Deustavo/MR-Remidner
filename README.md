@@ -1,6 +1,6 @@
 # 🤖 GitLab Merge Request Reminder Bot
 
-This bot automatically sends a daily summary of open Merge Requests from a GitLab project to a Slack channel. It provides visual status tags based on the review and approval state of each MR.
+This bot automatically sends a daily summary of open Merge Requests created by specific users across all their GitLab projects to a Slack channel. It provides visual status tags based on the review and approval state of each MR.
 
 ---
 
@@ -13,6 +13,7 @@ This bot automatically sends a daily summary of open Merge Requests from a GitLa
   - Waiting for QA
   - Changes requested by QA
   - Ready to merge
+- 👥 **Track MRs by authors**: Monitor MRs created by specific users across all accessible projects
 - ✅ Works serverlessly via **GitHub Actions**.
 - 🧠 Uses Slack's rich message formatting for clean display.
 
@@ -26,9 +27,17 @@ Each Merge Request is shown with a status and an emoji, based on the following r
 |--------|----------------------|------------------------------------------------------------------------|
 | 💬     | Threads Pending       | Has unresolved threads                                                |
 | 🕵️‍♂️   | Waiting Code Review   | No unresolved threads, no approvals                                  |
-| 🛠️     | Changes Requested by QA     | Has related issues with 'QA::Waiting to dev' label                   |
+| 🛠️     | Changes Requested by QA     | Has related issues with 'QA::Waiting to dev' label OR related issues have open child items (subtasks) |
 | 🔍     | Waiting QA            | No unresolved threads, has approval(s), but related issues don't have QA approval labels |
 | ✅     | Ready to Merge        | No unresolved threads, has approvals, and related issues have 'WIP::Tested' or later labels |
+
+### QA Changes Requested Logic
+
+The bot detects when QA has requested changes by checking:
+1. **Label Check**: Related issues have the `QA::Waiting to dev` label, OR
+2. **Child Items Check**: Related issues have open child items (subtasks)
+
+This flexible approach works for different team workflows - whether you use labels, subtasks, or both to track QA feedback.
 
 ### QA Approval Logic
 
@@ -79,23 +88,34 @@ npm install
 
 ### 3. Environment Variables
 
-Add a `.env` file to the root of your project with the following content:
+Copy `env.example` to `.env` and configure your credentials:
+```bash
+cp env.example .env
+```
+
+Or create a `.env` file manually with the following content:
 
 ```env
 SLACK_TOKEN=your-slack-bot-token
 SLACK_CHANNEL=channel-id-or-name
 GITLAB_TOKEN=your-gitlab-personal-access-token
-GITLAB_PROJECT_ID=your-project-id
+GITLAB_AUTHOR_USERNAMES=username1,username2,username3
 ```
 
-> 🔎 Tip: Use the channel ID (e.g. `C01ABCXYZ`) instead of just the name to avoid `channel_not_found` errors.
-
+> 🔎 **Tip**: Use the channel ID (e.g. `C01ABCXYZ`) instead of just the name to avoid `channel_not_found` errors.
+> 
+> 📝 **Author Usernames**: Add a comma-separated list of GitLab usernames to track MRs from multiple developers across all their projects.
 
 ### 4. Run the bot manually
 
 ```bash
 npx ts-node src/index.ts
 ```
+
+> 💡 **Pro Tip**: You can also pass usernames directly in code instead of using `.env`:
+> ```typescript
+> const messages = await getMergeRequestsByAuthors(['username1', 'username2']);
+> ```
 
 ### 5. See the slack message
 
@@ -116,7 +136,7 @@ Go to your repository → `Settings > Secrets > Actions` and add:
 - `SLACK_TOKEN`
 - `SLACK_CHANNEL`
 - `GITLAB_TOKEN`
-- `GITLAB_PROJECT_ID`
+- `GITLAB_AUTHOR_USERNAMES`
 
 ### 🧩 GitHub Actions Workflow
 
@@ -143,7 +163,7 @@ jobs:
         env:
           SLACK_TOKEN: ${{ secrets.SLACK_TOKEN }}
           GITLAB_TOKEN: ${{ secrets.GITLAB_TOKEN }}
-          GITLAB_PROJECT_ID: ${{ secrets.GITLAB_PROJECT_ID }}
+          GITLAB_AUTHOR_USERNAMES: ${{ secrets.GITLAB_AUTHOR_USERNAMES }}
           SLACK_CHANNEL: ${{ secrets.SLACK_CHANNEL }}
 ```
 

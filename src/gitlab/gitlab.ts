@@ -16,6 +16,7 @@ const BOARD_LABELS = [
   'WIP::Waiting QA',
   'WIP::QA',
   'WIP::Tested',
+  'WIP::CSM',
   'WIP::Waiting Deploy'
 ] as const;
 
@@ -165,6 +166,20 @@ function hasBlockedLabel(relatedIssues: GitLabIssue[]): boolean {
 }
 
 /**
+ * Checks if any related issue is in Waiting QA stage or beyond
+ */
+function isInQaStageOrBeyond(relatedIssues: GitLabIssue[]): boolean {
+  const waitingQaIndex = BOARD_LABELS.indexOf('WIP::Waiting QA');
+  
+  return relatedIssues.some(issue => 
+    issue.labels.some(label => {
+      const labelIndex = BOARD_LABELS.indexOf(label as any);
+      return labelIndex >= waitingQaIndex && labelIndex !== -1;
+    })
+  );
+}
+
+/**
  * Determines the status of a merge request based on its discussions, approvals and related issues
  */
 async function determineMergeRequestStatus(
@@ -204,6 +219,11 @@ async function determineMergeRequestStatus(
       return MergeRequestStatus.READY_TO_MERGE;
     }
 
+    return MergeRequestStatus.WAITING_QA_REVIEW;
+  }
+  
+  const isInQaStage = isInQaStageOrBeyond(relatedIssues);
+  if (isInQaStage) {
     return MergeRequestStatus.WAITING_QA_REVIEW;
   }
   

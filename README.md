@@ -12,7 +12,9 @@ This bot automatically sends a daily summary of open Merge Requests created by s
   - Waiting for code review
   - Waiting for QA
   - Changes requested by QA
+  - Waiting CSM
   - Ready to merge
+- 🚫 **Smart filtering**: Automatically excludes MRs with blocked issues from notifications
 - 👥 **Track MRs by authors**: Monitor MRs created by specific users across all accessible projects
 - ✅ Works serverlessly via **GitHub Actions**.
 - 🧠 Uses Slack's rich message formatting for clean display.
@@ -26,10 +28,19 @@ Each Merge Request is shown with a status and an emoji, based on the following r
 | Emoji  | Status               | Logic                                                                 |
 |--------|----------------------|------------------------------------------------------------------------|
 | 💬     | Threads Pending       | Has unresolved threads                                                |
-| 🕵️‍♂️   | Waiting Code Review   | No unresolved threads, no approvals                                  |
+| 🕵️‍♂️   | Waiting Code Review   | No unresolved threads, no approvals, and issue is before QA stage    |
 | 🛠️     | Changes Requested by QA     | Has related issues with 'QA::Waiting to dev' label OR related issues have open child items (subtasks) |
-| 🔍     | Waiting QA            | No unresolved threads, has approval(s), but related issues don't have QA approval labels |
-| ✅     | Ready to Merge        | No unresolved threads, has approvals, and related issues have 'WIP::Tested' or later labels |
+| 🔍     | Waiting QA            | No unresolved threads, has approval(s) OR issue is in QA stage or beyond |
+| 📋     | Waiting CSM           | Related issue is in 'WIP::CSM' stage                                  |
+| ✅     | Ready to Merge        | Related issues have 'WIP::Tested' or 'WIP::Waiting Deploy' labels   |
+
+### Blocked Issues Filter
+
+MRs are automatically **excluded from notifications** if their related issues have any label containing the word "Blocked" (case-insensitive). This includes labels like:
+- `Status::Blocked`
+- `Blocked by API`
+- `blocked`
+- Any other label variation containing "Blocked"
 
 ### QA Changes Requested Logic
 
@@ -44,19 +55,34 @@ This flexible approach works for different team workflows - whether you use labe
 
 **Note**: Configure the `GITLAB_QA_USERNAMES` environment variable with your QA team members' GitLab usernames to enable child item detection.
 
-### QA Approval Logic
+### Board Workflow Labels
 
-The bot determines QA approval by checking if related issues have the following labels (or any later in the workflow):
-- `WIP::Tested` ✅
-- `WIP::Waiting Deploy` ✅
+The bot understands your board workflow and determines MR status based on issue labels:
 
 **Board Labels Order:**
 1. `WIP::Dev`
 2. `WIP::Waiting Code Review`
-3. `WIP::Waiting QA`
+3. `WIP::Waiting QA` ← **QA stage starts here**
 4. `WIP::QA`
-5. `WIP::Tested` ← **QA Approved from here**
-6. `WIP::Waiting Deploy` ← **QA Approved**
+5. `WIP::Tested` ← **Ready to Merge**
+6. `WIP::CSM` ← **Waiting CSM**
+7. `WIP::Waiting Deploy` ← **Ready to Merge**
+
+**Key Rules:**
+- Issues in `WIP::Tested` or `WIP::Waiting Deploy` → MR status: **Ready to Merge**
+- Issues in `WIP::CSM` → MR status: **Waiting CSM**
+- Issues in `WIP::Waiting QA` or beyond (without approvals) → MR status: **Waiting QA Review** (not "Waiting Code Review")
+
+### Status Priority
+
+When multiple conditions apply, the bot uses the following priority order (highest to lowest):
+
+1. 💬 **Threads Pending** (always highest priority)
+2. 🛠️ **Changes Requested by QA** (QA feedback takes precedence)
+3. ✅ **Ready to Merge** (issues in final stages)
+4. 📋 **Waiting CSM** (CSM approval needed)
+5. 🔍 **Waiting QA Review** (with approvals or in QA stage)
+6. 🕵️‍♂️ **Waiting Code Review** (default when no approvals)
 
 Each MR is shown in the message like this:
 

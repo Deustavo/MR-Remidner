@@ -214,19 +214,13 @@ async function determineMergeRequestStatus(
   // Check if QA requested changes by:
   // 1. Label "QA::Waiting to dev" OR
   // 2. Has open child items (subtasks)
-  const hasQaWaitingLabel = relatedIssues.some(issue => 
-    issue.labels.includes('QA::Waiting to dev')
-  );
-
+  const hasQaWaitingLabel = relatedIssues.some(issue =>  issue.labels.includes('QA::Waiting to dev'));
   if (hasQaWaitingLabel) {
     return MergeRequestStatus.CHANGES_REQUESTED_BY_QA;
   }
 
   // Check if any related issue has open child items
-  const hasOpenChildItemsResults = await Promise.all(
-    relatedIssues.map(issue => hasOpenChildItems(issue))
-  );
-  
+  const hasOpenChildItemsResults = await Promise.all(relatedIssues.map(issue => hasOpenChildItems(issue)));
   if (hasOpenChildItemsResults.some(hasOpen => hasOpen)) {
     return MergeRequestStatus.CHANGES_REQUESTED_BY_QA;
   }

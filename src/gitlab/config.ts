@@ -3,9 +3,11 @@ dotenv.config();
 
 export const GITLAB_CONFIG = {
   API_URL: 'https://gitlab.com/api/v4',
-  PROJECT_ID: process.env.GITLAB_PROJECT_ID,
   TOKEN: process.env.GITLAB_TOKEN || '',
-  PROJECT_PATH: process.env.GITLAB_PROJECT_PATH || 'rico360/ricochet'
+  // Comma-separated list of GitLab usernames to track MRs for
+  AUTHOR_USERNAMES: process.env.GITLAB_AUTHOR_USERNAMES?.split(',').map(u => u.trim()) || [],
+  // Comma-separated list of QA team member usernames
+  QA_USERNAMES: process.env.GITLAB_QA_USERNAMES?.split(',').map(u => u.trim()) || []
 } as const;
 
 export const headers = {

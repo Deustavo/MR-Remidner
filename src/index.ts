@@ -1,10 +1,12 @@
-import { getOpenMergeRequests } from './gitlab/gitlab';
+import { getMergeRequestsByAuthors } from './gitlab/gitlab';
 import { sendToSlack } from './slack';
 
 async function run() {
   try {
     console.log('🚀 Starting MR check...');
-    const messages = await getOpenMergeRequests();
+    
+    // Fetch MRs by authors configured in GITLAB_AUTHOR_USERNAMES
+    const messages = await getMergeRequestsByAuthors();
 
     if (messages.length > 0) {
       const header = '*We have pending MRs 👀*\n';

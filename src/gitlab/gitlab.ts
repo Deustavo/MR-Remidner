@@ -136,6 +136,7 @@ const STATUS_PRIORITIES: Record<MergeRequestStatusType, number> = {
   [MergeRequestStatus.THREADS_PENDING]: 3,
   [MergeRequestStatus.CHANGES_REQUESTED_BY_QA]: 4,
   [MergeRequestStatus.WAITING_QA_REVIEW]: 5,
+  [MergeRequestStatus.WAITING_CSM]: 6,
 };
 
 function getStatusPriority(status: MergeRequestStatusType): number {
@@ -180,6 +181,15 @@ function isInQaStageOrBeyond(relatedIssues: GitLabIssue[]): boolean {
 }
 
 /**
+ * Checks if any related issue is in CSM stage
+ */
+function isInCsmStage(relatedIssues: GitLabIssue[]): boolean {
+  return relatedIssues.some(issue => 
+    issue.labels.includes('WIP::CSM')
+  );
+}
+
+/**
  * Determines the status of a merge request based on its discussions, approvals and related issues
  */
 async function determineMergeRequestStatus(
@@ -211,6 +221,11 @@ async function determineMergeRequestStatus(
     return MergeRequestStatus.CHANGES_REQUESTED_BY_QA;
   }
   
+  const isInCsm = isInCsmStage(relatedIssues);
+  if (isInCsm) {
+    return MergeRequestStatus.WAITING_CSM;
+  }
+
   if (approvals.length > 0) {
     const hasQaApproval = relatedIssues.some(issue => hasQaApprovalByLabels(issue.labels));
     const hasMultipleApprovals = approvals.length > 1;

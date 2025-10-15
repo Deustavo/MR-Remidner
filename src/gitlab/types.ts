@@ -4,6 +4,7 @@ export const MergeRequestStatus = {
   THREADS_PENDING: '💬 Threads Pending',
   WAITING_QA_REVIEW: '🔍 Waiting QA Review',
   CHANGES_REQUESTED_BY_QA: '🛠️ Changes Requested by QA',
+  WAITING_CSM: '📋 Waiting CSM',
 } as const;
 
 export type MergeRequestStatusType = typeof MergeRequestStatus[keyof typeof MergeRequestStatus];

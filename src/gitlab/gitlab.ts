@@ -154,6 +154,17 @@ function hasQaApprovalByLabels(issueLabels: string[]): boolean {
 }
 
 /**
+ * Checks if any related issue has a label containing "Blocked"
+ */
+function hasBlockedLabel(relatedIssues: GitLabIssue[]): boolean {
+  return relatedIssues.some(issue => 
+    issue.labels.some(label => 
+      label.toLowerCase().includes('blocked')
+    )
+  );
+}
+
+/**
  * Determines the status of a merge request based on its discussions, approvals and related issues
  */
 async function determineMergeRequestStatus(
@@ -277,13 +288,22 @@ export async function getMergeRequestsByAuthors(authorUsernames?: string[]): Pro
       })
     );
 
+    // Filter out MRs with related issues that have "Blocked" labels
+    const nonBlockedMergeRequests = processedMergeRequests.filter(({ relatedIssues }) => {
+      const isBlocked = hasBlockedLabel(relatedIssues);
+      if (isBlocked) {
+        console.log(` └─ Filtering out MR: related issue has a "Blocked" label`);
+      }
+      return !isBlocked;
+    });
+
     // Sort MRs by status priority
-    processedMergeRequests.sort((a, b) => 
+    nonBlockedMergeRequests.sort((a, b) => 
       getStatusPriority(a.status) - getStatusPriority(b.status)
     );
 
     // Format messages for the selected MRs
-    return processedMergeRequests.map(({ mergeRequest, status, relatedIssues }) => 
+    return nonBlockedMergeRequests.map(({ mergeRequest, status, relatedIssues }) => 
       formatMergeRequestMessage(mergeRequest, status, relatedIssues)
     );
   } catch (error) {

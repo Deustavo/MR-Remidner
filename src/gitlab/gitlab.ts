@@ -190,6 +190,16 @@ function isInCsmStage(relatedIssues: GitLabIssue[]): boolean {
 }
 
 /**
+ * Checks if any related issue is ready to deploy (Tested or Waiting Deploy)
+ */
+function isReadyToDeploy(relatedIssues: GitLabIssue[]): boolean {
+  return relatedIssues.some(issue => 
+    issue.labels.includes('WIP::Tested') || 
+    issue.labels.includes('WIP::Waiting Deploy')
+  );
+}
+
+/**
  * Determines the status of a merge request based on its discussions, approvals and related issues
  */
 async function determineMergeRequestStatus(
@@ -219,6 +229,11 @@ async function determineMergeRequestStatus(
   
   if (hasOpenChildItemsResults.some(hasOpen => hasOpen)) {
     return MergeRequestStatus.CHANGES_REQUESTED_BY_QA;
+  }
+  
+  const readyToDeploy = isReadyToDeploy(relatedIssues);
+  if (readyToDeploy) {
+    return MergeRequestStatus.READY_TO_MERGE;
   }
   
   const isInCsm = isInCsmStage(relatedIssues);

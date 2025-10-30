@@ -102,7 +102,7 @@ npx ts-node src/index.ts
 
 You should receive a message like this in Slack
 
-![image](https://github.com/user-attachments/assets/74f1a335-fcf3-478f-a974-4cc4837b63b8)
+<img width="638" height="531" alt="image" src="https://github.com/user-attachments/assets/afd5e134-6bf9-480a-9ce9-88c2fe498608" />
 
 ---
 

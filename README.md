@@ -4,23 +4,6 @@ This bot automatically sends a daily summary of open Merge Requests created by s
 
 ---
 
-## 🚀 Features
-
-- 💬 Posts Merge Request summaries with titles and clickable links.
-- 🔎 Detects MR status based on threads, approvals, and issue labels:
-  - Threads pending
-  - Waiting for code review
-  - Waiting for QA
-  - Changes requested by QA
-  - Waiting CSM
-  - Ready to merge
-- 🚫 **Smart filtering**: Automatically excludes MRs with blocked issues from notifications
-- 👥 **Track MRs by authors**: Monitor MRs created by specific users across all accessible projects
-- ✅ Works serverlessly via **GitHub Actions**.
-- 🧠 Uses Slack's rich message formatting for clean display.
-
----
-
 ## 📊 Status Logic
 
 Each Merge Request is shown with a status and an emoji, based on the following rules:
@@ -34,26 +17,6 @@ Each Merge Request is shown with a status and an emoji, based on the following r
 | 📋     | Waiting CSM           | Related issue is in 'WIP::CSM' stage                                  |
 | ✅     | Ready to Merge        | Related issues have 'WIP::Tested' or 'WIP::Waiting Deploy' labels   |
 
-### Blocked Issues Filter
-
-MRs are automatically **excluded from notifications** if their related issues have any label containing the word "Blocked" (case-insensitive). This includes labels like:
-- `Status::Blocked`
-- `Blocked by API`
-- `blocked`
-- Any other label variation containing "Blocked"
-
-### QA Changes Requested Logic
-
-The bot detects when QA has requested changes by checking:
-1. **Label Check**: Related issues have the `QA::Waiting to dev` label, OR
-2. **Child Items Check**: Related issues have open linked items that meet ALL these criteria:
-   - ✅ State: **opened** (only open items)
-   - ✅ Title: **does NOT contain "[Test Cases]"** (test cases are excluded)
-   - ✅ Author: **is a QA team member** (username in `GITLAB_QA_USERNAMES`)
-
-This flexible approach works for different team workflows - whether you use labels, linked items created by QA, or both to track QA feedback.
-
-**Note**: Configure the `GITLAB_QA_USERNAMES` environment variable with your QA team members' GitLab usernames to enable child item detection.
 
 ### Board Workflow Labels
 
@@ -67,22 +30,6 @@ The bot understands your board workflow and determines MR status based on issue 
 5. `WIP::Tested` ← **Ready to Merge**
 6. `WIP::CSM` ← **Waiting CSM**
 7. `WIP::Waiting Deploy` ← **Ready to Merge**
-
-**Key Rules:**
-- Issues in `WIP::Tested` or `WIP::Waiting Deploy` → MR status: **Ready to Merge**
-- Issues in `WIP::CSM` → MR status: **Waiting CSM**
-- Issues in `WIP::Waiting QA` or beyond (without approvals) → MR status: **Waiting QA Review** (not "Waiting Code Review")
-
-### Status Priority
-
-When multiple conditions apply, the bot uses the following priority order (highest to lowest):
-
-1. 💬 **Threads Pending** (always highest priority)
-2. 🛠️ **Changes Requested by QA** (QA feedback takes precedence)
-3. ✅ **Ready to Merge** (issues in final stages)
-4. 📋 **Waiting CSM** (CSM approval needed)
-5. 🔍 **Waiting QA Review** (with approvals or in QA stage)
-6. 🕵️‍♂️ **Waiting Code Review** (default when no approvals)
 
 Each MR is shown in the message like this:
 
@@ -146,7 +93,7 @@ GITLAB_QA_USERNAMES=qa_username1,qa_username2
 npx ts-node src/index.ts
 ```
 
-> 💡 **Pro Tip**: You can also pass usernames directly in code instead of using `.env`:
+> 💡 **Tip**: You can also pass usernames directly in code instead of using `.env`:
 > ```typescript
 > const messages = await getMergeRequestsByAuthors(['username1', 'username2']);
 > ```
@@ -161,7 +108,7 @@ You should receive a message like this in Slack
 
 ## ☁️ Deployment with GitHub Actions
 
-This project uses **GitHub Actions** to run automatically at 10:00 AM BRT on weekdays.
+This project uses **GitHub Actions** to run automatically at 9:00 AM  and 4:00 PM BRT on weekdays.
 
 ### 🛠 Setup GitHub Secrets
 
@@ -182,7 +129,8 @@ name: GitLab Merge Request Reminder
 
 on:
   schedule:
-    - cron: '0 14 * * 1-5'  # 10h BRT, apenas dias úteis
+    - cron: '0 12 * * 1-5'  # 9h BRT, apenas dias úteis
+    - cron: '0 19 * * 1-5'  # 16h BRT, apenas dias úteis
   workflow_dispatch:        # permite rodar manualmente
 
 jobs:
@@ -190,17 +138,20 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
+
       - uses: actions/setup-node@v4
         with:
           node-version: 20
+
       - run: npm install
+
       - run: npx ts-node src/index.ts
         env:
           SLACK_TOKEN: ${{ secrets.SLACK_TOKEN }}
+          SLACK_CHANNEL: ${{ secrets.SLACK_CHANNEL }}
           GITLAB_TOKEN: ${{ secrets.GITLAB_TOKEN }}
           GITLAB_AUTHOR_USERNAMES: ${{ secrets.GITLAB_AUTHOR_USERNAMES }}
           GITLAB_QA_USERNAMES: ${{ secrets.GITLAB_QA_USERNAMES }}
-          SLACK_CHANNEL: ${{ secrets.SLACK_CHANNEL }}
 ```
 
 ---
